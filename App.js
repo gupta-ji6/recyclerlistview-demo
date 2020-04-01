@@ -1,114 +1,99 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- * @flow strict-local
- */
-
-import React from 'react';
-import {
-  SafeAreaView,
-  StyleSheet,
-  ScrollView,
-  View,
-  Text,
-  StatusBar,
-} from 'react-native';
+import React, { Component } from "react";
+import { StyleSheet, View, Dimensions } from "react-native";
 
 import {
-  Header,
-  LearnMoreLinks,
-  Colors,
-  DebugInstructions,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+  RecyclerListView,
+  LayoutProvider,
+  DataProvider
+} from "recyclerlistview";
 
-const App: () => React$Node = () => {
-  return (
-    <>
-      <StatusBar barStyle="dark-content" />
-      <SafeAreaView>
-        <ScrollView
-          contentInsetAdjustmentBehavior="automatic"
-          style={styles.scrollView}>
-          <Header />
-          {global.HermesInternal == null ? null : (
-            <View style={styles.engine}>
-              <Text style={styles.footer}>Engine: Hermes</Text>
-            </View>
-          )}
-          <View style={styles.body}>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Step One</Text>
-              <Text style={styles.sectionDescription}>
-                Edit <Text style={styles.highlight}>App.js</Text> to change this
-                screen and then come back to see your edits.
-              </Text>
-            </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>See Your Changes</Text>
-              <Text style={styles.sectionDescription}>
-                <ReloadInstructions />
-              </Text>
-            </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Debug</Text>
-              <Text style={styles.sectionDescription}>
-                <DebugInstructions />
-              </Text>
-            </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Learn More</Text>
-              <Text style={styles.sectionDescription}>
-                Read the docs to discover what to do next:
-              </Text>
-            </View>
-            <LearnMoreLinks />
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </>
-  );
-};
+import Navbar from "./src/components/Navbar";
+import ProductData from "./src/components/ProductData";
+import TopWidget from "./src/components/TopWidget";
+import ParentingCard from "./src/components/ParentingCard";
+import ProductCard from "./src/components/ProductCard";
+
+class App extends Component {
+  constructor(props) {
+    super(props);
+    let { width } = Dimensions.get("window");
+
+    this.state = {
+      //Since component should always render once data has changed, make data provider part of the state
+      //Create the data provider and provide method which takes in two rows of data and return if those two are different or not.
+      //THIS IS VERY IMPORTANT, FORGET PERFORMANCE IF THIS IS MESSED UP
+      dataProvider: new DataProvider((r1, r2) => {
+        return r1 !== r2;
+      }).cloneWithRows(ProductData)
+    };
+
+    //Create the layout provider
+    //First method: Given an index return the type of item e.g ListItemType1, ListItemType2 in case you have variety of items in your list/grid
+    //Second: Given a type and object set the exact height and width for that type on given object, if you're using non deterministic rendering provide close estimates
+    //If you need data based check you can access your data provider here
+    //You'll need data in most cases, we don't provide it by default to enable things like data virtualization in the future
+    //NOTE: For complex lists LayoutProvider will also be complex it would then make sense to move it to a different file
+
+    this._layoutProvider = new LayoutProvider(
+      i => {
+        return this.state.dataProvider.getDataForIndex(i).type;
+      },
+      (type, dim) => {
+        switch (type) {
+          case "PARENTING_ITEM":
+            dim.width = width;
+            dim.height = 83;
+            break;
+          case "BABY_ITEM":
+            dim.width = width;
+            dim.height = 150;
+            break;
+          case "HEADER":
+            dim.width = width;
+            dim.height = 300;
+            break;
+          default:
+            dim.width = width;
+            dim.height = 0;
+        }
+      }
+    );
+
+    this._renderRow = this._renderRow.bind(this);
+  }
+
+  //Given type and data return the view component
+  _renderRow(type, data) {
+    switch (type) {
+      case "PARENTING_ITEM":
+        return <ParentingCard />;
+      case "BABY_ITEM":
+        return <ProductCard data={data} />;
+      case "HEADER":
+        return <TopWidget />;
+      default:
+        return null;
+    }
+  }
+
+  render() {
+    return (
+      <View style={styles.container}>
+        <Navbar title="FirstCry" />
+        <RecyclerListView
+          rowRenderer={this._renderRow}
+          dataProvider={this.state.dataProvider}
+          layoutProvider={this._layoutProvider}
+        />
+      </View>
+    );
+  }
+}
 
 const styles = StyleSheet.create({
-  scrollView: {
-    backgroundColor: Colors.lighter,
-  },
-  engine: {
-    position: 'absolute',
-    right: 0,
-  },
-  body: {
-    backgroundColor: Colors.white,
-  },
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: Colors.black,
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-    color: Colors.dark,
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-  footer: {
-    color: Colors.dark,
-    fontSize: 12,
-    fontWeight: '600',
-    padding: 4,
-    paddingRight: 12,
-    textAlign: 'right',
-  },
+  container: {
+    flex: 1
+  }
 });
 
 export default App;
